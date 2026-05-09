@@ -2,6 +2,7 @@ import {Routes, Route} from 'react-router-dom'
 import {Home, Audit, Results} from './pages/export'
 import { useEffect } from 'react'
 import { axiosInstance } from './lib/axios'
+import { Toaster } from 'react-hot-toast'
 
 function App() {
 
@@ -26,6 +27,10 @@ function App() {
       <Route path="/audit" element={<Audit />} />
       <Route path="/results" element={<Results />} />
     </Routes>
+
+
+
+    <Toaster />
     </div>
   )
 }
