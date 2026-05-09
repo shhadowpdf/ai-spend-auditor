@@ -178,6 +178,36 @@ const Audit = () => {
     setAddedTools((prev) => prev.filter((tool) => tool.key !== key));
   };
 
+  const buildAuditPayload = () => ({
+    auditItems: addedTools.map((tool) => ({
+      toolName: tool.toolName,
+      planName: tool.planName,
+      monthlySpend: tool.monthlySpend,
+      membersNum: tool.membersNum,
+      priceLabel: tool.priceLabel,
+    })),
+    totalMonthlySpend,
+    totalAnnualSpend: totalMonthlySpend * 12,
+  });
+
+  const handleSubmitAudit = async () => {
+    if (addedTools.length === 0) {
+      toast.error("Add at least one tool before submitting the audit.");
+      return null;
+    }
+
+    const payload = buildAuditPayload();
+
+    try {
+      const response = await axiosInstance.post("/tools/audit", payload);
+      toast.success("Audit submitted successfully. Please wait.");
+      return response.data;
+    } catch (error) {
+      toast.error("Unable to submit audit. Please try again later.");
+      throw error;
+    }
+  };
+
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -387,6 +417,8 @@ const Audit = () => {
                   </div>
 
                   <button
+                    type="button"
+                    onClick={handleSubmitAudit}
                     disabled={addedTools.length === 0}
                     className={`w-full py-3 rounded-2xl font-semibold transition ${
                       addedTools.length === 0
@@ -394,7 +426,7 @@ const Audit = () => {
                         : "bg-violet-600 hover:bg-violet-500 text-white cursor-pointer"
                     }`}
                   >
-                    Analyze Now
+                    Submit Audit
                   </button>
 
                   <p className="text-xs text-zinc-500 text-center">Add at least one tool to continue</p>

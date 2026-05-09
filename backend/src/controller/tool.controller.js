@@ -18,4 +18,10 @@ export const getSupportedTools = (req, res) => {
     return res.status(200).json(filteredInfo)
 }
 
+export const getUserAudit = (req,res) => {
+    const data = req.body;
+    console.log(data);
+    
 
+    return res.json({message: "done"})
+}
