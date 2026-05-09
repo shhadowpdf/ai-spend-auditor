@@ -101,7 +101,7 @@ export const pricingData = {
                 audit: {}
             },
             {
-                id: "team",
+                id: "team-standard",
                 name: "Team-Standard",
                 price: 20,
                 seats: {
@@ -112,7 +112,7 @@ export const pricingData = {
                 audit: {}
             },
             {
-                id: "team",
+                id: "team-premium",
                 name: "Team-Premium",
                 price: 100,
                 seats: {

@@ -9,7 +9,8 @@ export const getSupportedTools = (req, res) => {
                 id: plan.id,
                 name: plan.name,
                 price: plan.price,
-                requiresSeat: plan.requiresSeat
+                requiresSeat: plan.requiresSeat,
+                seats: plan?.seats
             }))
         }
     ));
