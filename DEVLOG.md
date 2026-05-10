@@ -20,3 +20,12 @@
 **What I learned:** Learned how to keep form state across refresh and how to structure frontend audit payloads for backend endpoints. <br>
 **Blockers / what I'm stuck on:** Core logic. <br>
 **Plan for tomorrow:** Handle submitted audit payload validation.
+
+## Day 4 - 2026-05-10
+
+**Hours worked:** 1.5hr <br>
+**What I did:** Added use case selection in the form submitted by user.<br>
+**What I learned:** Learned how to validate plan-specific inputs, manage composite form state, and keep user selections across reloads. <br>
+**Blockers / what I'm stuck on:** Backend audit response is still a placeholder and needs proper validation/business logic. <br>
+**Plan for tomorrow:** Audit response.
+
