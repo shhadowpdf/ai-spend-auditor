@@ -25,6 +25,7 @@ interface AddedTool {
   monthlySpend: number;
   membersNum?: number;
   priceLabel: string;
+  useCase?: Array<"coding" | "writing" | "data" | "research" | "mixed">;
 }
 
 const Audit = () => {
@@ -33,6 +34,9 @@ const Audit = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTool, setSelectedTool] = useState("");
   const [selectedPlan, setSelectedPlan] = useState("");
+  const [planUseCase, setPlanUseCase] = useState<
+    Array<"coding" | "writing" | "data" | "research" | "mixed">
+  >([]);
   const [membersNum, setMembersNum] = useState(2);
   const [tokenUsage, setTokenUsage] = useState(0);
 
@@ -46,8 +50,10 @@ const Audit = () => {
         if (parsed?.addedTools) setAddedTools(parsed.addedTools);
         if (parsed?.selectedTool) setSelectedTool(parsed.selectedTool);
         if (parsed?.selectedPlan) setSelectedPlan(parsed.selectedPlan);
-        if (typeof parsed?.membersNum === "number") setMembersNum(parsed.membersNum);
-        if (typeof parsed?.tokenUsage === "number") setTokenUsage(parsed.tokenUsage);
+        if (typeof parsed?.membersNum === "number")
+          setMembersNum(parsed.membersNum);
+        if (typeof parsed?.tokenUsage === "number")
+          setTokenUsage(parsed.tokenUsage);
       } catch {
         console.error("Failed to parse saved audit state. Starting fresh.");
       }
@@ -75,10 +81,13 @@ const Audit = () => {
 
   useEffect(() => {
     const currentTool = tools.find((tool) => tool.id === selectedTool);
-    if (currentTool && !currentTool.plans.some((plan) => plan.id === selectedPlan)) {
+    if (
+      currentTool &&
+      !currentTool.plans.some((plan) => plan.id === selectedPlan)
+    ) {
       setSelectedPlan(currentTool.plans[0]?.id || "");
     }
-    
+
     // Auto adjust membersNum if switching to a plan with seat requirements
     const plans = currentTool?.plans || [];
     const plan = plans.find((p) => p.id === selectedPlan);
@@ -100,7 +109,7 @@ const Audit = () => {
           selectedPlan,
           membersNum,
           tokenUsage,
-        })
+        }),
       );
     }
   }, [addedTools, selectedTool, selectedPlan, membersNum, tokenUsage, loading]);
@@ -109,7 +118,9 @@ const Audit = () => {
   const plans = currentTool?.plans || [];
   const planInfo = plans.find((plan) => plan.id === selectedPlan) || null;
   const isTokenPlan = Boolean(
-    planInfo && typeof planInfo.price === "object" && "inputPerMTok" in planInfo.price
+    planInfo &&
+    typeof planInfo.price === "object" &&
+    "inputPerMTok" in planInfo.price,
   );
   const tokenPrice = isTokenPlan
     ? (planInfo?.price as { inputPerMTok: number; outputPerMTok: number })
@@ -119,18 +130,26 @@ const Audit = () => {
     if (!planInfo) return 0;
 
     if (typeof planInfo.price === "number") {
-      const seatCount = planInfo.requiresSeat ? Math.max(membersNum, planInfo.seats?.min || 1) : 1;
+      const seatCount = planInfo.requiresSeat
+        ? Math.max(membersNum, planInfo.seats?.min || 1)
+        : 1;
       return planInfo.price * seatCount;
     }
 
     if (tokenPrice) {
-      return tokenUsage * ((tokenPrice.inputPerMTok || 0) + (tokenPrice.outputPerMTok || 0));
+      return (
+        tokenUsage *
+        ((tokenPrice.inputPerMTok || 0) + (tokenPrice.outputPerMTok || 0))
+      );
     }
 
     return 0;
   };
 
-  const totalMonthlySpend = addedTools.reduce((total, tool) => total + tool.monthlySpend, 0);
+  const totalMonthlySpend = addedTools.reduce(
+    (total, tool) => total + tool.monthlySpend,
+    0,
+  );
 
   const handleAddTool = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -141,7 +160,9 @@ const Audit = () => {
     }
 
     if (planInfo.requiresSeat && membersNum < (planInfo.seats?.min || 1)) {
-      toast.error(`Minimum ${planInfo.seats?.min || 1} people required for this plan.`);
+      toast.error(
+        `Minimum ${planInfo.seats?.min || 1} people required for this plan.`,
+      );
       return;
     }
 
@@ -150,15 +171,20 @@ const Audit = () => {
       return;
     }
 
+    if (planUseCase.length === 0) {
+      toast.error("Please select at least one use case.");
+      return;
+    }
+
     const monthlySpend = calculateMonthlySpend();
     const priceLabel =
       typeof planInfo.price === "number"
         ? `$${planInfo.price}${planInfo.requiresSeat ? "/seat" : ""}`
         : typeof planInfo.price === "string"
-        ? planInfo.price
-        : tokenPrice
-        ? `$${tokenPrice.inputPerMTok}/in + $${tokenPrice.outputPerMTok}/out`
-        : "Based on usage";
+          ? planInfo.price
+          : tokenPrice
+            ? `$${tokenPrice.inputPerMTok}/in + $${tokenPrice.outputPerMTok}/out`
+            : "Based on usage";
 
     const newTool: AddedTool = {
       key: `${selectedTool}-${selectedPlan}-${Date.now()}`,
@@ -167,11 +193,13 @@ const Audit = () => {
       monthlySpend,
       membersNum: planInfo.requiresSeat ? membersNum : undefined,
       priceLabel,
+      useCase: planUseCase,
     };
 
     setAddedTools((prev) => [...prev, newTool]);
     toast.success(`${newTool.toolName} - ${newTool.planName} added`);
     setTokenUsage(0);
+    setPlanUseCase([]);
   };
 
   const handleRemoveTool = (key: string) => {
@@ -185,6 +213,7 @@ const Audit = () => {
       monthlySpend: tool.monthlySpend,
       membersNum: tool.membersNum,
       priceLabel: tool.priceLabel,
+      useCase: tool.useCase || "",
     })),
     totalMonthlySpend,
     totalAnnualSpend: totalMonthlySpend * 12,
@@ -221,9 +250,12 @@ const Audit = () => {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-16">
-            <h1 className="text-5xl lg:text-6xl font-bold text-white">Audit Your AI Stack</h1>
+            <h1 className="text-5xl lg:text-6xl font-bold text-white">
+              Audit Your AI Stack
+            </h1>
             <p className="mt-4 text-zinc-400 text-lg">
-              Add your AI tool subscriptions and discover how much you could be saving.
+              Add your AI tool subscriptions and discover how much you could be
+              saving.
             </p>
           </div>
 
@@ -231,11 +263,18 @@ const Audit = () => {
             {/* Form Section */}
             <div className="lg:col-span-2">
               <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8">
-                <h2 className="text-2xl font-bold text-white mb-6">Add Your AI Tools</h2>
+                <h2 className="text-2xl font-bold text-white mb-6">
+                  Add Your AI Tools
+                </h2>
 
                 <form onSubmit={handleAddTool} className="space-y-4 mb-8">
                   <div>
-                    <label htmlFor="tool-name" className="block text-sm font-medium text-zinc-300 mb-2">Tool Name</label>
+                    <label
+                      htmlFor="tool-name"
+                      className="block text-sm font-medium text-zinc-300 mb-2"
+                    >
+                      Tool Name
+                    </label>
                     <select
                       id="tool-name"
                       title="tool-name"
@@ -252,7 +291,12 @@ const Audit = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="plan-name" className="block text-sm font-medium text-zinc-300 mb-2">Tier/Plan</label>
+                    <label
+                      htmlFor="plan-name"
+                      className="block text-sm font-medium text-zinc-300 mb-2"
+                    >
+                      Tier/Plan
+                    </label>
                     <select
                       id="plan-name"
                       title="plan"
@@ -270,7 +314,10 @@ const Audit = () => {
 
                   {planInfo?.requiresSeat && (
                     <div>
-                      <label htmlFor="members-num" className="block text-sm font-medium text-zinc-300 mb-2">
+                      <label
+                        htmlFor="members-num"
+                        className="block text-sm font-medium text-zinc-300 mb-2"
+                      >
                         Number of people
                       </label>
                       <input
@@ -284,7 +331,8 @@ const Audit = () => {
                       />
                       {membersNum < (planInfo.seats?.min || 2) && (
                         <p className="text-xs text-red-500 mt-1">
-                          Minimum {planInfo.seats?.min || 2} people required for this plan.
+                          Minimum {planInfo.seats?.min || 2} people required for
+                          this plan.
                         </p>
                       )}
                     </div>
@@ -293,7 +341,10 @@ const Audit = () => {
                   {tokenPrice && (
                     <>
                       <div>
-                        <label htmlFor="token-usage" className="block text-sm font-medium text-zinc-300 mb-2">
+                        <label
+                          htmlFor="token-usage"
+                          className="block text-sm font-medium text-zinc-300 mb-2"
+                        >
                           Expected monthly usage (million tokens)
                         </label>
                         <input
@@ -303,12 +354,17 @@ const Audit = () => {
                           value={tokenUsage}
                           placeholder="e.g. 2"
                           className="w-full bg-black border border-zinc-700 rounded-2xl px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
-                          onChange={(e) => setTokenUsage(Number(e.target.value))}
+                          onChange={(e) =>
+                            setTokenUsage(Number(e.target.value))
+                          }
                         />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label htmlFor="input-token-price" className="block text-sm font-medium text-zinc-300 mb-2">
+                          <label
+                            htmlFor="input-token-price"
+                            className="block text-sm font-medium text-zinc-300 mb-2"
+                          >
                             Input per million token ($)
                           </label>
                           <input
@@ -321,7 +377,10 @@ const Audit = () => {
                           />
                         </div>
                         <div>
-                          <label htmlFor="output-token-price" className="block text-sm font-medium text-zinc-300 mb-2">
+                          <label
+                            htmlFor="output-token-price"
+                            className="block text-sm font-medium text-zinc-300 mb-2"
+                          >
                             Output per million token ($)
                           </label>
                           <input
@@ -339,7 +398,12 @@ const Audit = () => {
 
                   {!isTokenPlan && (
                     <div>
-                      <label htmlFor="monthly-spend" className="block text-sm font-medium text-zinc-300 mb-2">Monthly Spend ($)</label>
+                      <label
+                        htmlFor="monthly-spend"
+                        className="block text-sm font-medium text-zinc-300 mb-2"
+                      >
+                        Monthly Spend ($)
+                      </label>
                       <input
                         id="monthly-spend"
                         title="Estimated monthly spend"
@@ -347,7 +411,9 @@ const Audit = () => {
                         value={
                           typeof planInfo?.price === "number"
                             ? planInfo.price *
-                              (planInfo.requiresSeat ? Math.max(membersNum, planInfo.seats?.min || 1) : 1)
+                              (planInfo.requiresSeat
+                                ? Math.max(membersNum, planInfo.seats?.min || 1)
+                                : 1)
                             : 0
                         }
                         readOnly
@@ -355,6 +421,41 @@ const Audit = () => {
                       />
                     </div>
                   )}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-300 mb-4">
+                      Use Cases <span className="text-red-500">*</span> (select at least one)
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {["coding", "writing", "data", "research", "mixed"].map((useCase) => {
+                        const isChecked = planUseCase.includes(useCase as "coding" | "writing" | "data" | "research" | "mixed");
+                        return (
+                          <label key={useCase} className="flex items-center gap-3 cursor-pointer group p-3 rounded-xl border-2 transition-all bg-zinc-950" style={{borderColor: isChecked ? "#a78bfa" : "#3f3f46"}}>
+                            <div className="relative flex items-center justify-center w-5 h-5 rounded-lg border-2 flex-shrink-0" style={{backgroundColor: isChecked ? "#7c3aed" : "#09090b", borderColor: isChecked ? "#7c3aed" : "#52525b"}}>
+                              {isChecked && (
+                                <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const value = useCase as "coding" | "writing" | "data" | "research" | "mixed";
+                                if (e.target.checked) {
+                                  setPlanUseCase([...planUseCase, value]);
+                                } else {
+                                  setPlanUseCase(planUseCase.filter((u) => u !== value));
+                                }
+                              }}
+                              className="hidden"
+                            />
+                            <span className="text-sm font-medium capitalize flex-1" style={{color: isChecked ? "#c4b5fd" : "#a1a1aa"}}>{useCase}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
 
                   <button
                     type="submit"
@@ -366,7 +467,9 @@ const Audit = () => {
 
                 {addedTools.length > 0 && (
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-white">Added Tools</h3>
+                    <h3 className="text-lg font-semibold text-white">
+                      Added Tools
+                    </h3>
                     {addedTools.map((tool) => (
                       <div
                         key={tool.key}
@@ -374,8 +477,12 @@ const Audit = () => {
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div>
-                            <p className="text-white font-semibold">{tool.toolName}</p>
-                            <p className="text-zinc-400 text-sm">{tool.planName}</p>
+                            <p className="text-white font-semibold">
+                              {tool.toolName}
+                            </p>
+                            <p className="text-zinc-400 text-sm">
+                              {tool.planName}
+                            </p>
                           </div>
                           <button
                             type="button"
@@ -387,10 +494,18 @@ const Audit = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-sm text-zinc-400">
                           <div>Price: {tool.priceLabel}</div>
-                          {tool.membersNum ? <div>Seats: {tool.membersNum}</div> : null}
+                          {tool.membersNum ? (
+                            <div>Seats: {tool.membersNum}</div>
+                          ) : null}
                         </div>
+                        {tool.useCase && (
+                          <div className="text-sm text-zinc-400">
+                            Use case: {tool.useCase.join(", ")}
+                          </div>
+                        )}
                         <div className="text-white font-semibold">
-                          Estimated monthly spend: ${tool.monthlySpend.toFixed(2)}
+                          Estimated monthly spend: $
+                          {tool.monthlySpend.toFixed(2)}
                         </div>
                       </div>
                     ))}
@@ -402,18 +517,28 @@ const Audit = () => {
             {/* Summary Section */}
             <div>
               <div className="bg-linear-to-br from-violet-900/20 to-violet-900/5 border border-violet-500/20 rounded-3xl p-8 sticky top-32">
-                <h3 className="text-lg font-semibold text-violet-300 mb-6">Audit Summary</h3>
+                <h3 className="text-lg font-semibold text-violet-300 mb-6">
+                  Audit Summary
+                </h3>
 
                 <div className="space-y-6">
                   <div>
-                    <p className="text-sm text-zinc-400 mb-1">Total Monthly Spend</p>
-                    <p className="text-3xl font-bold text-white">${totalMonthlySpend.toFixed(2)}</p>
-                    <p className="text-xs text-zinc-500 mt-1">${(totalMonthlySpend * 12).toFixed(2)}/year</p>
+                    <p className="text-sm text-zinc-400 mb-1">
+                      Total Monthly Spend
+                    </p>
+                    <p className="text-3xl font-bold text-white">
+                      ${totalMonthlySpend.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      ${(totalMonthlySpend * 12).toFixed(2)}/year
+                    </p>
                   </div>
 
                   <div className="bg-black/40 border border-zinc-800 rounded-2xl p-4">
                     <p className="text-sm text-zinc-400 mb-2">Tools Added</p>
-                    <p className="text-2xl font-bold text-white">{addedTools.length}</p>
+                    <p className="text-2xl font-bold text-white">
+                      {addedTools.length}
+                    </p>
                   </div>
 
                   <button
@@ -429,7 +554,9 @@ const Audit = () => {
                     Submit Audit
                   </button>
 
-                  <p className="text-xs text-zinc-500 text-center">Add at least one tool to continue</p>
+                  <p className="text-xs text-zinc-500 text-center">
+                    Add at least one tool to continue
+                  </p>
                 </div>
               </div>
             </div>
@@ -438,21 +565,29 @@ const Audit = () => {
           {/* Info Section */}
           <div className="mt-16 grid md:grid-cols-3 gap-6">
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-              <h4 className="text-white font-semibold mb-2">No Billing Access Needed</h4>
+              <h4 className="text-white font-semibold mb-2">
+                No Billing Access Needed
+              </h4>
               <p className="text-sm text-zinc-400">
-                Simply enter your subscription details. We never access your billing info.
+                Simply enter your subscription details. We never access your
+                billing info.
               </p>
             </div>
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-              <h4 className="text-white font-semibold mb-2">Instant Analysis</h4>
+              <h4 className="text-white font-semibold mb-2">
+                Instant Analysis
+              </h4>
               <p className="text-sm text-zinc-400">
                 Get personalized recommendations in seconds based on your stack.
               </p>
             </div>
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-              <h4 className="text-white font-semibold mb-2">Shareable Reports</h4>
+              <h4 className="text-white font-semibold mb-2">
+                Shareable Reports
+              </h4>
               <p className="text-sm text-zinc-400">
-                Generate beautiful reports to share with your team and stakeholders.
+                Generate beautiful reports to share with your team and
+                stakeholders.
               </p>
             </div>
           </div>
