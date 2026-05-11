@@ -6,39 +6,39 @@ export const pricingData = {
                 id: "hobby",
                 name: "Hobby",
                 price: 0,
-                audit: {}
+                bestCase: ["coding"]
             },
             {
                 id: "pro",
                 name: "Pro",
                 price: 20,
-                audit: {}
+                bestCase: ["coding", "writing"]
             },
             {
                 id: "pro-plus",
                 name: "Pro+",
                 price: 60,
-                audit: {}
+                bestCase: ["coding", "data", "mixed"]
             },
             {
                 id: "ultra",
                 name: "Ultra",
                 price: 200,
-                audit: {}
+                bestCase: ["coding", "research", "data"]
             },
             {
                 id: "teams",
                 name: "Teams",
                 price: 40,
                 requiresSeat: true,
-                audit: {}
+                bestCase: ["coding", "mixed"]
             },
             {
                 id: "enterprise",
                 name: "Enterprise",
                 price: "based on usage",
                 requiresSeat: true,
-                audit: {}
+                bestCase: ["mixed", "data", "research"]
             }
         ]
     },
@@ -49,33 +49,33 @@ export const pricingData = {
                 id: "free",
                 name: "Free",
                 price: 0,
-                audit: {}
+                bestCase: ["writing", "research"]
             },
             {
                 id: "pro",
                 name: "Pro",
                 price: 10,
-                audit: {}
+                bestCase: ["coding", "writing"]
             },
             {
                 id: "pro-plus",
                 name: "Pro+",
                 price: 39,
-                audit: {}
+                bestCase: ["coding", "data", "mixed"]
             },
             {
                 id: "business",
                 name: "Business",
                 price: 19,
                 requiresSeat: true,
-                audit: {}
+                bestCase: ["mixed", "writing", "data"]
             },
             {
                 id: "enterprise",
                 name: "Enterprise",
                 price: 39,
                 requiresSeat: true,
-                audit: {}
+                bestCase: ["mixed", "data", "research"]
             }
         ]
     },
@@ -86,19 +86,19 @@ export const pricingData = {
                 id: "free",
                 name: "Free",
                 price: 0,
-                audit: {}
+                bestCase: ["writing", "research"]
             },
             {
                 id: "pro",
                 name: "Pro",
                 price: 17,
-                audit: {}
+                bestCase: ["coding", "writing"]
             },
             {
                 id: "max",
                 name: "Max",
                 price: 100,
-                audit: {}
+                bestCase: ["research", "data", "mixed"]
             },
             {
                 id: "team-standard",
@@ -109,7 +109,7 @@ export const pricingData = {
                     max: 150
                 },
                 requiresSeat: true,
-                audit: {}
+                bestCase: ["research", "data"]
             },
             {
                 id: "team-premium",
@@ -120,7 +120,7 @@ export const pricingData = {
                     max: 150
                 },
                 requiresSeat: true,
-                audit: {}
+                bestCase: ["mixed", "writing", "data"]
             },
             {
                 id: "enterprise",
@@ -130,7 +130,7 @@ export const pricingData = {
                 seats: {
                     min: 20
                 },
-                audit: {}
+                bestCase: ["mixed", "data", "research"]
             }
         ]
     },
@@ -141,32 +141,32 @@ export const pricingData = {
                 id: "free",
                 name: "Free",
                 price: 0,
-                audit: {}
+                bestCase: ["writing", "research"]
             },
             {
                 id: "go",
                 name: "ChatGPT Go",
                 price: 8,
-                audit: {}
+                bestCase: ["writing", "research"]
             },
             {
                 id: "plus",
                 name: "ChatGPT Plus",
                 price: 20,
-                audit: {}
+                bestCase: ["coding", "research"]
             },
             {
                 id: "pro",
                 name: "ChatGPT Pro",
                 price: 100,
-                audit: {}
+                bestCase: ["coding", "writing"]
             },
             {
                 id: "business",
                 name: "ChatGPT Business",
                 price: 20,
                 requiresSeat: true,
-                audit: {}
+                bestCase: ["mixed", "writing", "data"]
             }
         ]
     },
@@ -182,7 +182,7 @@ export const pricingData = {
                     outputPerMTok: 25,
                 },
 
-                audit: {},
+                bestCase: ["research", "coding"]
             },
 
             {
@@ -194,7 +194,7 @@ export const pricingData = {
                     outputPerMTok: 25,
                 },
 
-                audit: {},
+                bestCase: ["research", "coding"]
             },
 
             {
@@ -206,7 +206,7 @@ export const pricingData = {
                     outputPerMTok: 25,
                 },
 
-                audit: {},
+                bestCase: ["research", "coding"]
             },
 
             {
@@ -218,7 +218,7 @@ export const pricingData = {
                     outputPerMTok: 75,
                 },
 
-                audit: {},
+                bestCase: ["research", "writing"]
             },
 
             {
@@ -230,7 +230,7 @@ export const pricingData = {
                     outputPerMTok: 75,
                 },
 
-                audit: {},
+                bestCase: ["research", "writing"]
             },
 
             {
@@ -242,7 +242,7 @@ export const pricingData = {
                     outputPerMTok: 15,
                 },
 
-                audit: {},
+                bestCase: ["research", "mixed"]
             },
 
             {
@@ -254,7 +254,7 @@ export const pricingData = {
                     outputPerMTok: 15,
                 },
 
-                audit: {},
+                bestCase: ["research", "mixed"]
             },
 
             {
@@ -266,7 +266,7 @@ export const pricingData = {
                     outputPerMTok: 15,
                 },
 
-                audit: {},
+                bestCase: ["research", "mixed"]
             },
 
             {
@@ -278,7 +278,7 @@ export const pricingData = {
                     outputPerMTok: 15,
                 },
 
-                audit: {},
+                bestCase: ["research", "mixed"]
             },
 
             {
@@ -290,7 +290,7 @@ export const pricingData = {
                     outputPerMTok: 5,
                 },
 
-                audit: {},
+                bestCase: ["writing", "data"]
             },
 
             {
@@ -302,7 +302,7 @@ export const pricingData = {
                     outputPerMTok: 4,
                 },
 
-                audit: {},
+                bestCase: ["writing", "data"]
             },
 
             {
@@ -314,7 +314,7 @@ export const pricingData = {
                     outputPerMTok: 75,
                 },
 
-                audit: {},
+                bestCase: ["research", "writing"]
             },
 
             {
@@ -326,7 +326,7 @@ export const pricingData = {
                     outputPerMTok: 1.25,
                 },
 
-                audit: {},
+                bestCase: ["writing", "research"]
             },
         ]
     },
@@ -342,7 +342,7 @@ export const pricingData = {
                     outputPerMTok: 15,
                 },
 
-                audit: {},
+                bestCase: ["coding", "research"]
             },
 
             {
@@ -354,7 +354,7 @@ export const pricingData = {
                     outputPerMTok: 7.5,
                 },
 
-                audit: {},
+                bestCase: ["research", "mixed"]
             },
 
             {
@@ -366,7 +366,7 @@ export const pricingData = {
                     outputPerMTok: 2.25,
                 },
 
-                audit: {},
+                bestCase: ["data", "research"]
             },
         ]
     },
@@ -379,7 +379,7 @@ export const pricingData = {
 
                 price: 0,
 
-                audit: {},
+                bestCase: ["writing", "research"]
             },
 
             {
@@ -388,7 +388,7 @@ export const pricingData = {
 
                 price: 7.99,
 
-                audit: {},
+                bestCase: ["writing", "mixed"]
             },
 
             {
@@ -397,7 +397,7 @@ export const pricingData = {
 
                 price: 19.99,
 
-                audit: {},
+                bestCase: ["mixed", "data"]
             },
 
             {
@@ -406,7 +406,7 @@ export const pricingData = {
 
                 price: 249.99,
 
-                audit: {},
+                bestCase: ["coding", "research"]
             },
         ]
     },
@@ -418,26 +418,26 @@ export const pricingData = {
                 name: "Free",
                 
                 price: 0,
-                audit: {}
+                bestCase: ["writing", "research"]
             },
             {
                 id: "pro",
                 name: "Pro",
                 price: 20,
-                audit: {}
+                bestCase: ["coding", "writing"]
             },
             {
                 id: "max",
                 name: "Max",
                 price: 200,
-                audit: {}
+                bestCase: ["research", "data", "mixed"]
             },
             {
                 id: "team",
                 name: "Team",
                 price: 40,
                 requiresSeat: true,
-                audit: {}
+                bestCase: ["coding", "data"]
             }
         ]
     }
