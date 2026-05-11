@@ -21,6 +21,8 @@ interface ToolItem {
 interface AddedTool {
   key: string;
   toolName: string;
+  planId: string;
+  toolId: string;
   planName: string;
   monthlySpend: number;
   membersNum?: number;
@@ -188,6 +190,8 @@ const Audit = () => {
 
     const newTool: AddedTool = {
       key: `${selectedTool}-${selectedPlan}-${Date.now()}`,
+      toolId: selectedTool,
+      planId: selectedPlan,
       toolName: currentTool?.name || "Unknown Tool",
       planName: planInfo.name,
       monthlySpend,
@@ -208,6 +212,8 @@ const Audit = () => {
 
   const buildAuditPayload = () => ({
     auditItems: addedTools.map((tool) => ({
+      toolId: tool.toolId,
+      planId: tool.planId,
       toolName: tool.toolName,
       planName: tool.planName,
       monthlySpend: tool.monthlySpend,
