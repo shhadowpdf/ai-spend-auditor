@@ -1,4 +1,5 @@
 import {pricingData} from "../data/pricingData.js";
+import {runAudit} from "../utils/audit.engine.js";
 
 export const getSupportedTools = (req, res) => {
     const filteredInfo = Object.keys(pricingData).map((tool)=> (
@@ -18,10 +19,9 @@ export const getSupportedTools = (req, res) => {
     return res.status(200).json(filteredInfo)
 }
 
-export const getUserAudit = (req,res) => {
-    const data = req.body;
-    console.log(data);
-    
+export const getUserAudit = async (req,res) => {
+    const userData = req.body;
+    const result = await runAudit(userData);
 
-    return res.json({message: "done"})
+    return res.json({data: result})
 }
