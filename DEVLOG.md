@@ -37,3 +37,10 @@
 **Blockers / what I'm stuck on:** None <br>
 **Plan for tomorrow:** Test the complete audit flow and refine UI/UX based on user feedback.
 
+## Day 6 — 2026-05-12
+
+**Hours worked:** 5hrs <br>
+**What I did:** Supabase setup, LLM response and shareable link. <br>
+**What I learned:** Learnt to setup supabase in a real application.  <br>
+**Blockers / what I'm stuck on:** None <br>
+**Plan for tomorrow:** Complete transactional email and docs.
