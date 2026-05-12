@@ -9,7 +9,7 @@ const PORT = ENV.PORT;
 const app = express();
 app.set("trust proxy", true);
 app.use(cors({
-    origin: "*",
+    origin: ENV.PUBLIC_URL,
 }));
 
 app.use(express.json());

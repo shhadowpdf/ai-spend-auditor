@@ -113,6 +113,41 @@ async function fetchFromSupabase(publicId) {
   );
 }
 
+async function updateSupabaseAuditRecord(
+  updatedRecord
+) {
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from(PUBLIC_AUDITS_TABLE)
+    .update({
+      company_name:
+        updatedRecord.companyName,
+      email: updatedRecord.email,
+      report: updatedRecord.report,
+    })
+    .eq("public_id", updatedRecord.publicId)
+    .select(
+      "id, public_id, public_url, company_name, email, report, public_report, llm_response, created_at"
+    )
+    .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "Supabase update failed for public audit.",
+      error.message
+    );
+    return null;
+  }
+
+  return normalizeStoredAudit(
+    data,
+    "supabase"
+  );
+}
+
 export async function createPublicAuditRecord({
   companyName,
   email,
@@ -180,4 +215,61 @@ export async function getPublicAuditRecord(
   }
 
   return storedAudit;
+}
+
+export async function updatePublicAuditLeadCapture(
+  {
+    publicId,
+    email,
+    companyName,
+    interestType,
+  }
+) {
+  const existingRecord =
+    memoryAuditStore.get(publicId) ||
+    (await fetchFromSupabase(publicId));
+
+  if (!existingRecord) {
+    return null;
+  }
+
+  const nextCompanyName =
+    companyName ||
+    existingRecord.companyName ||
+    null;
+  const nextEmail =
+    email || existingRecord.email || null;
+  const updatedRecord = {
+    ...existingRecord,
+    companyName: nextCompanyName,
+    email: nextEmail,
+    report: {
+      ...(existingRecord.report || {}),
+      leadCapture: {
+        ...(
+          existingRecord.report
+            ?.leadCapture || {}
+        ),
+        interestType,
+        email: nextEmail,
+        companyName: nextCompanyName,
+        requestedAt:
+          new Date().toISOString(),
+      },
+    },
+  };
+
+  const persistedRecord =
+    await updateSupabaseAuditRecord(
+      updatedRecord
+    );
+  const nextRecord =
+    persistedRecord ||
+    normalizeStoredAudit(
+      updatedRecord,
+      existingRecord.storage
+    );
+
+  memoryAuditStore.set(publicId, nextRecord);
+  return nextRecord;
 }
