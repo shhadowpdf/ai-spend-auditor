@@ -34,6 +34,8 @@ const Audit = () => {
   const [tools, setTools] = useState<ToolItem[]>([]);
   const [addedTools, setAddedTools] = useState<AddedTool[]>([]);
   const [loading, setLoading] = useState(true);
+  const [companyName, setCompanyName] = useState("");
+  const [email, setEmail] = useState("");
   const [selectedTool, setSelectedTool] = useState("");
   const [selectedPlan, setSelectedPlan] = useState("");
   const [planUseCase, setPlanUseCase] = useState<
@@ -52,6 +54,8 @@ const Audit = () => {
         if (parsed?.addedTools) setAddedTools(parsed.addedTools);
         if (parsed?.selectedTool) setSelectedTool(parsed.selectedTool);
         if (parsed?.selectedPlan) setSelectedPlan(parsed.selectedPlan);
+        if (parsed?.companyName) setCompanyName(parsed.companyName);
+        if (parsed?.email) setEmail(parsed.email);
         if (typeof parsed?.membersNum === "number")
           setMembersNum(parsed.membersNum);
         if (typeof parsed?.tokenUsage === "number")
@@ -107,6 +111,8 @@ const Audit = () => {
         STORAGE_KEY,
         JSON.stringify({
           addedTools,
+          companyName,
+          email,
           selectedTool,
           selectedPlan,
           membersNum,
@@ -114,7 +120,16 @@ const Audit = () => {
         }),
       );
     }
-  }, [addedTools, selectedTool, selectedPlan, membersNum, tokenUsage, loading]);
+  }, [
+    addedTools,
+    companyName,
+    email,
+    selectedTool,
+    selectedPlan,
+    membersNum,
+    tokenUsage,
+    loading,
+  ]);
 
   const currentTool = tools.find((tool) => tool.id === selectedTool);
   const plans = currentTool?.plans || [];
@@ -211,6 +226,8 @@ const Audit = () => {
   };
 
   const buildAuditPayload = () => ({
+    companyName: companyName.trim(),
+    email: email.trim(),
     auditItems: addedTools.map((tool) => ({
       toolId: tool.toolId,
       planId: tool.planId,
@@ -235,7 +252,11 @@ const Audit = () => {
 
     try {
       const response = await axiosInstance.post("/tools/audit", payload);
-      toast.success("Audit submitted successfully. Please wait.");
+      window.sessionStorage.setItem("audit-results", JSON.stringify(response.data));
+      toast.success("Audit completed! Redirecting to results...");
+      setTimeout(() => {
+        window.location.href = "/results";
+      }, 1000);
       return response.data;
     } catch (error) {
       toast.error("Unable to submit audit. Please try again later.");
@@ -544,6 +565,51 @@ const Audit = () => {
                     <p className="text-sm text-zinc-400 mb-2">Tools Added</p>
                     <p className="text-2xl font-bold text-white">
                       {addedTools.length}
+                    </p>
+                  </div>
+
+                  <div className="space-y-4 pt-2">
+                    <div>
+                      <label
+                        htmlFor="company-name"
+                        className="block text-sm font-medium text-zinc-300 mb-2"
+                      >
+                        Company name
+                      </label>
+                      <input
+                        id="company-name"
+                        type="text"
+                        value={companyName}
+                        placeholder="Optional"
+                        className="w-full bg-black border border-zinc-700 rounded-2xl px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+                        onChange={(e) =>
+                          setCompanyName(e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="work-email"
+                        className="block text-sm font-medium text-zinc-300 mb-2"
+                      >
+                        Work email
+                      </label>
+                      <input
+                        id="work-email"
+                        type="email"
+                        value={email}
+                        placeholder="Optional"
+                        className="w-full bg-black border border-zinc-700 rounded-2xl px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+                        onChange={(e) =>
+                          setEmail(e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <p className="text-xs text-zinc-500 leading-relaxed">
+                      Stored privately with the audit. The public share link
+                      never shows your company name or email.
                     </p>
                   </div>
 
