@@ -44,3 +44,9 @@
 **What I learned:** Learnt to setup supabase in a real application.  <br>
 **Blockers / what I'm stuck on:** None <br>
 **Plan for tomorrow:** Complete transactional email and docs.
+
+## Day 7 — 2026-05-08
+
+**Hours worked:** 4hrs <br>
+**What I did:** Added rate limiting middleware (global + per-route) with 429 toast handling. Wrote full doc layer. <br>
+**What I learned:** Writing architecture docs surfaces gaps missed during building. Economics before GTM was the right order — unit economics forced specificity on which channels actually work. <br>
