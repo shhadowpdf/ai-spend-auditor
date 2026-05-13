@@ -90,15 +90,21 @@ const PublicAudit = () => {
             nextReport.shareCard.description
           );
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as {
+          name?: string;
+          code?: string;
+          response?: { status?: number };
+        };
+
         if (
-          error?.name === "CanceledError" ||
-          error?.code === "ERR_CANCELED"
+          err?.name === "CanceledError" ||
+          err?.code === "ERR_CANCELED"
         ) {
           return;
         }
 
-        if (error?.response?.status === 404) {
+        if (err?.response?.status === 404) {
           setNotFound(true);
           return;
         }
