@@ -64,10 +64,10 @@ function getTopSavingsOpportunities(
 
 function buildEmailSubject(totalPotentialSavings) {
   if (totalPotentialSavings > 0) {
-    return `Your Credex audit is ready: ${formatCurrency(totalPotentialSavings)}/mo in potential savings`;
+    return `Your audit is ready: ${formatCurrency(totalPotentialSavings)}/mo in potential savings`;
   }
 
-  return "Your Credex audit is ready";
+  return "Your audit is ready";
 }
 
 function buildOpportunityMarkup(
@@ -126,8 +126,8 @@ function buildHtmlEmail({
         )}/mo</strong> in potential savings from lower-cost options that still fit your selected use cases.`
       : "We did not find a cheaper matched alternative for the tools and use cases you submitted.";
   const savingsFollowUpCopy = highSavingsCase
-    ? `This looks like a high-savings case, and the Credex team will reach out with next steps.`
-    : "Credex reaches out directly on high-savings cases.";
+    ? `This looks like a high-savings case, and the team will reach out with next steps.`
+    : "reaches out directly on high-savings cases.";
   const shareLinkMarkup = publicUrl
     ? `
       <div style="margin-top: 28px;">
@@ -144,7 +144,7 @@ function buildHtmlEmail({
     <div style="margin: 0; padding: 32px 16px; background: #f3f4f6; font-family: Arial, sans-serif;">
       <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 18px; padding: 32px; color: #111827;">
         <p style="margin: 0 0 16px; color: #6b7280; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;">
-          Credex Audit Confirmation
+          Audit Confirmation
         </p>
         <h1 style="margin: 0 0 16px; font-size: 28px; line-height: 1.2;">
           Your audit is complete
@@ -179,7 +179,7 @@ function buildTextEmail({
   highSavingsCase,
 }) {
   const lines = [
-    "Your Credex audit is complete.",
+    "Your audit is complete.",
     "",
     `Current spend reviewed: ${formatCurrency(
       totalMonthlySpend
@@ -213,8 +213,8 @@ function buildTextEmail({
   lines.push(
     "",
     highSavingsCase
-      ? "This looks like a high-savings case, and the Credex team will reach out with next steps."
-      : "Credex reaches out directly on high-savings cases."
+      ? "This looks like a high-savings case, and the team will reach out with next steps."
+      : "Reaches out directly on high-savings cases."
   );
 
   if (publicUrl) {
@@ -239,18 +239,18 @@ function buildLeadCaptureCopy({
   ) {
     return {
       subject:
-        "Credex will follow up on your audit",
+        "will follow up on your audit",
       html: `
         <div style="margin: 0; padding: 32px 16px; background: #f3f4f6; font-family: Arial, sans-serif;">
           <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 18px; padding: 32px; color: #111827;">
             <p style="margin: 0 0 16px; color: #6b7280; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;">
-              Credex Follow-Up Confirmed
+              Follow-Up Confirmed
             </p>
             <h1 style="margin: 0 0 16px; font-size: 28px; line-height: 1.2;">
               We have your audit
             </h1>
             <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.7; color: #374151;">
-              Thanks. Credex will reach out${companyLine} to help you capture the savings identified in your audit.
+              Thanks. will reach out${companyLine} to help you capture the savings identified in your audit.
             </p>
             ${
               publicUrl
@@ -269,9 +269,9 @@ function buildLeadCaptureCopy({
         </div>
       `,
       text: [
-        "Credex will follow up on your audit.",
+        "will follow up on your audit.",
         "",
-        `Thanks. Credex will reach out${companyLine} to help you capture the savings identified in your audit.`,
+        `Thanks. will reach out${companyLine} to help you capture the savings identified in your audit.`,
         publicUrl
           ? `Redacted audit link: ${publicUrl}`
           : null,
@@ -283,12 +283,12 @@ function buildLeadCaptureCopy({
 
   return {
     subject:
-      "You're on the Credex optimization watchlist",
+      "You're on the optimization watchlist",
     html: `
       <div style="margin: 0; padding: 32px 16px; background: #f3f4f6; font-family: Arial, sans-serif;">
         <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 18px; padding: 32px; color: #111827;">
           <p style="margin: 0 0 16px; color: #6b7280; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;">
-            Credex Optimization Watch
+            Optimization Watch
           </p>
           <h1 style="margin: 0 0 16px; font-size: 28px; line-height: 1.2;">
             We will keep an eye on your stack
@@ -313,7 +313,7 @@ function buildLeadCaptureCopy({
       </div>
     `,
     text: [
-      "You're on the Credex optimization watchlist.",
+      "You're on the optimization watchlist.",
       "",
       `Thanks. We will notify you${companyLine} when new optimizations apply to your stack.`,
       publicUrl ? `Audit link: ${publicUrl}` : null,

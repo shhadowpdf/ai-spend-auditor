@@ -1028,11 +1028,6 @@ const Results = () => {
                   Current spend, action, and savings
                 </h2>
               </div>
-              <p className="max-w-xl text-sm leading-7 text-zinc-400">
-                Each card is designed to read cleanly in a screenshot:
-                current spend on the left, recommended move in the
-                middle, and the savings impact on the right.
-              </p>
             </div>
 
             <div className="space-y-5">
