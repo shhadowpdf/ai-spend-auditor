@@ -4,7 +4,9 @@ import { joinUrl } from "../utils/url.js";
 import { buildPublicAuditPayload } from "../utils/publicAudit.js";
 
 const PUBLIC_AUDITS_TABLE = "public_audits";
+const AUDITS_TABLE = "audits";
 const memoryAuditStore = new Map();
+const memoryInternalAuditStore = new Map();
 
 function createPublicId() {
   return uuidv4()
@@ -271,5 +273,249 @@ export async function updatePublicAuditLeadCapture(
     );
 
   memoryAuditStore.set(publicId, nextRecord);
+  return nextRecord;
+}
+
+function normalizeStoredAuditRecord(storedAudit) {
+  if (!storedAudit) {
+    return null;
+  }
+
+  return {
+    id: storedAudit.id,
+    auditId:
+      storedAudit.audit_id ||
+      storedAudit.auditId,
+    userEmail:
+      storedAudit.user_email ||
+      storedAudit.userEmail ||
+      null,
+    inputStack:
+      storedAudit.input_stack ||
+      storedAudit.inputStack ||
+      null,
+    outputResult:
+      storedAudit.output_result ||
+      storedAudit.outputResult ||
+      null,
+    pricingSnapshot:
+      storedAudit.pricing_snapshot ||
+      storedAudit.pricingSnapshot ||
+      null,
+    invalidated:
+      storedAudit.invalidated ||
+      false,
+    changeSummary:
+      storedAudit.change_summary ||
+      storedAudit.changeSummary ||
+      null,
+    originalAuditId:
+      storedAudit.original_audit_id ||
+      storedAudit.originalAuditId ||
+      null,
+    notifiedAt:
+      storedAudit.notified_at ||
+      storedAudit.notifiedAt ||
+      null,
+    createdAt:
+      storedAudit.created_at ||
+      storedAudit.createdAt,
+  };
+}
+
+async function persistAuditToSupabase(audit) {
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from(AUDITS_TABLE)
+    .insert({
+      id: audit.id,
+      audit_id: audit.auditId,
+      user_email: audit.userEmail,
+      input_stack: audit.inputStack,
+      output_result: audit.outputResult,
+      pricing_snapshot: audit.pricingSnapshot,
+      invalidated: audit.invalidated,
+      change_summary: audit.changeSummary,
+      original_audit_id: audit.originalAuditId,
+      notified_at: audit.notifiedAt,
+      created_at: audit.createdAt,
+    })
+    .select(
+      "id, audit_id, user_email, input_stack, output_result, pricing_snapshot, invalidated, change_summary, original_audit_id, notified_at, created_at"
+    )
+    .single();
+
+  if (error) {
+    console.warn(
+      "Supabase persistence failed for internal audit.",
+      error.message
+    );
+    return null;
+  }
+
+  return normalizeStoredAuditRecord(data);
+}
+
+async function fetchAuditFromSupabase(auditId) {
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from(AUDITS_TABLE)
+    .select(
+      "id, audit_id, user_email, input_stack, output_result, pricing_snapshot, invalidated, change_summary, original_audit_id, notified_at, created_at"
+    )
+    .eq("audit_id", auditId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "Supabase fetch failed for internal audit.",
+      error.message
+    );
+    return null;
+  }
+
+  return normalizeStoredAuditRecord(data);
+}
+
+async function fetchAllAuditsFromSupabase() {
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from(AUDITS_TABLE)
+    .select(
+      "id, audit_id, user_email, input_stack, output_result, pricing_snapshot, invalidated, change_summary, original_audit_id, notified_at, created_at"
+    );
+
+  if (error) {
+    console.warn(
+      "Supabase fetch all audits failed.",
+      error.message
+    );
+    return [];
+  }
+
+  return (data || []).map(normalizeStoredAuditRecord);
+}
+
+async function updateSupabaseInternalAuditRecord(updatedAudit) {
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from(AUDITS_TABLE)
+    .update({
+      invalidated: updatedAudit.invalidated,
+      change_summary: updatedAudit.changeSummary,
+      notified_at: updatedAudit.notifiedAt,
+    })
+    .eq("audit_id", updatedAudit.auditId)
+    .select(
+      "id, audit_id, user_email, input_stack, output_result, pricing_snapshot, invalidated, change_summary, original_audit_id, notified_at, created_at"
+    )
+    .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "Supabase update failed for internal audit.",
+      error.message
+    );
+    return null;
+  }
+
+  return normalizeStoredAuditRecord(data);
+}
+
+export async function saveAudit({
+  auditId,
+  userEmail,
+  inputStack,
+  outputResult,
+  pricingSnapshot,
+  originalAuditId = null,
+}) {
+  const createdAt = new Date().toISOString();
+  const record = {
+    id: uuidv4(),
+    auditId,
+    userEmail,
+    inputStack,
+    outputResult,
+    pricingSnapshot,
+    invalidated: false,
+    changeSummary: null,
+    originalAuditId,
+    notifiedAt: null,
+    createdAt,
+  };
+
+  const persistedRecord = await persistAuditToSupabase(record);
+  if (persistedRecord) {
+    memoryInternalAuditStore.set(auditId, persistedRecord);
+    return persistedRecord;
+  }
+
+  memoryInternalAuditStore.set(auditId, record);
+  return record;
+}
+
+export async function getAuditById(auditId) {
+  if (memoryInternalAuditStore.has(auditId)) {
+    return memoryInternalAuditStore.get(auditId);
+  }
+
+  const record = await fetchAuditFromSupabase(auditId);
+  if (record) {
+    memoryInternalAuditStore.set(auditId, record);
+  }
+
+  return record;
+}
+
+export async function getAllAudits() {
+  const records = await fetchAllAuditsFromSupabase();
+  records.forEach((record) => {
+    if (record?.auditId) {
+      memoryInternalAuditStore.set(record.auditId, record);
+    }
+  });
+
+  return records;
+}
+
+export async function markAuditInvalidated(
+  auditId,
+  changeSummary
+) {
+  const existingRecord =
+    memoryInternalAuditStore.get(auditId) ||
+    (await fetchAuditFromSupabase(auditId));
+
+  if (!existingRecord) {
+    return null;
+  }
+
+  const updatedRecord = {
+    ...existingRecord,
+    invalidated: true,
+    changeSummary,
+  };
+
+  const persistedRecord =
+    await updateSupabaseInternalAuditRecord(
+      updatedRecord
+    );
+
+  const nextRecord =
+    persistedRecord || updatedRecord;
+  memoryInternalAuditStore.set(auditId, nextRecord);
   return nextRecord;
 }

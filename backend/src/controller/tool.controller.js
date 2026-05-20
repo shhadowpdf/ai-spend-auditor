@@ -4,6 +4,7 @@ import { queryGroq } from "../utils/groq.js";
 import {
     createPublicAuditRecord,
     updatePublicAuditLeadCapture,
+    saveAudit,
 } from "../db/publicAuditStore.js";
 import { resolvePublicOrigin } from "../utils/url.js";
 import {
@@ -28,6 +29,27 @@ export const getSupportedTools = (req, res) => {
     ));
 
     return res.status(200).json(filteredInfo)
+}
+
+function capturePricingSnapshot(auditItems) {
+    if (!Array.isArray(auditItems)) {
+        return {};
+    }
+
+    return auditItems.reduce((snapshot, item) => {
+        const toolInfo = pricingData[item.toolId];
+
+        if (!toolInfo || snapshot[item.toolId]) {
+            return snapshot;
+        }
+
+        snapshot[item.toolId] = {
+            name: toolInfo.name,
+            plans: toolInfo.plans,
+        };
+
+        return snapshot;
+    }, {});
 }
 
 export const getUserAudit = async (req,res) => {
@@ -61,6 +83,22 @@ export const getUserAudit = async (req,res) => {
                 createdAt: storedAudit.createdAt,
                 storage: storedAudit.storage,
             };
+
+            try {
+                await saveAudit({
+                    auditId: storedAudit.publicId,
+                    userEmail: email,
+                    inputStack: {
+                        companyName,
+                        email,
+                        ...userData,
+                    },
+                    outputResult: result,
+                    pricingSnapshot: capturePricingSnapshot(userData.auditItems),
+                });
+            } catch (innerError) {
+                console.error("Unable to save internal audit record.", innerError);
+            }
         } catch (error) {
             console.error("Unable to save public audit.", error);
         }
