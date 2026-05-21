@@ -48,12 +48,77 @@ interface PublicAuditReport {
   };
 }
 
+function getToolPotentialSavings(toolAudit: ToolAudit) {
+  const nextCost =
+    toolAudit.bestAlternative?.monthlyCost ??
+    toolAudit.bestAlternative?.estimatedMonthlyCost ??
+    0;
+
+  return Math.max((toolAudit.currentMonthlySpend || 0) - nextCost, 0);
+}
+
+function buildCurrentReportSummary(toolAudits: ToolAudit[]) {
+  const totalMonthlySpend = toolAudits.reduce(
+    (sum, toolAudit) => sum + (toolAudit.currentMonthlySpend || 0),
+    0,
+  );
+  const totalPotentialSavings = toolAudits.reduce(
+    (sum, toolAudit) => sum + getToolPotentialSavings(toolAudit),
+    0,
+  );
+
+  return {
+    summary: {
+      totalMonthlySpend,
+      totalAnnualSpend: totalMonthlySpend * 12,
+      numberOfTools: toolAudits.length,
+    },
+    totalPotentialSavings,
+  };
+}
+
 const PublicAudit = () => {
   const { publicId } = useParams();
   const [report, setReport] =
     useState<PublicAuditReport | null>(null);
+  const [internalAudit, setInternalAudit] =
+    useState<{ invalidated: boolean; changeSummary?: any } | null>(
+      null,
+    );
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  const currentReportToolAudits =
+    internalAudit?.invalidated &&
+    internalAudit.changeSummary?.currentReport?.toolAudits
+      ? internalAudit.changeSummary.currentReport.toolAudits
+      : null;
+
+  const currentReportSummary =
+    currentReportToolAudits &&
+    currentReportToolAudits.length > 0
+      ? buildCurrentReportSummary(currentReportToolAudits)
+      : null;
+
+  const displayReport = report
+    ? currentReportSummary && currentReportToolAudits
+      ? {
+          ...report,
+          toolAudits: currentReportToolAudits,
+          overallRecommendations:
+            internalAudit?.changeSummary?.currentReport
+              ?.overallRecommendations || report.overallRecommendations,
+          summary: currentReportSummary.summary,
+          shareCard: {
+            ...report.shareCard,
+            totalPotentialSavings:
+              currentReportSummary.totalPotentialSavings,
+          },
+        }
+      : report
+    : null;
+
+  const visibleReport = (displayReport || report) as PublicAuditReport;
 
   useEffect(() => {
     if (!publicId) {
@@ -120,6 +185,43 @@ const PublicAudit = () => {
     return () => controller.abort();
   }, [publicId]);
 
+  useEffect(() => {
+    if (!publicId) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const response = await axiosInstance.get(
+          `/tools/audit/${publicId}`,
+          {
+            signal: controller.signal,
+          },
+        );
+
+        setInternalAudit(response.data);
+      } catch (error: unknown) {
+        const err = error as {
+          name?: string;
+          code?: string;
+          response?: { status?: number };
+        };
+
+        if (
+          err?.name === "CanceledError" ||
+          err?.code === "ERR_CANCELED"
+        ) {
+          return;
+        }
+
+      }
+    })();
+
+    return () => controller.abort();
+  }, [publicId]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -165,10 +267,10 @@ const PublicAudit = () => {
               Public AI Spend Audit
             </p>
             <h1 className="text-4xl lg:text-6xl font-bold text-white max-w-4xl">
-              {report.shareCard.title}
+              {visibleReport?.shareCard.title}
             </h1>
             <p className="text-zinc-300 text-lg leading-relaxed mt-5 max-w-3xl">
-              {report.shareCard.description}
+              {visibleReport?.shareCard.description}
             </p>
 
             <div className="inline-flex items-center gap-2 mt-6 px-4 py-2 rounded-full bg-black/35 border border-white/10 text-sm text-zinc-300">
@@ -180,13 +282,125 @@ const PublicAudit = () => {
             </div>
           </div>
 
+          {internalAudit?.invalidated && internalAudit.changeSummary && (
+            <div className="bg-amber-900/10 border border-amber-600 rounded-3xl p-6 mb-8">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.24em] text-amber-300">
+                    Audit updated
+                  </p>
+                  <h2 className="text-2xl font-semibold text-amber-50">
+                    Pricing or recommendations changed.
+                  </h2>
+                  <p className="mt-2 text-amber-200 text-sm max-w-3xl">
+                    This shared audit was invalidated after a pricing refresh. Review the diff and rerun to see fresh guidance.
+                  </p>
+                </div>
+                <Link
+                  to={`/audit/diff/${publicId}`}
+                  className="inline-flex items-center justify-center rounded-2xl bg-amber-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-amber-400"
+                >
+                  View diff & rerun
+                </Link>
+              </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-3xl bg-black/20 border border-amber-600 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-amber-200">
+                    Pricing updates
+                  </p>
+                  <p className="mt-3 text-2xl font-semibold text-white">
+                    {internalAudit.changeSummary.pricingDiff?.changes?.length || 0}
+                  </p>
+                </div>
+                <div className="rounded-3xl bg-black/20 border border-amber-600 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-amber-200">
+                    Recommendation change
+                  </p>
+                  <p className="mt-3 text-2xl font-semibold text-white">
+                    {internalAudit.changeSummary.recommendationDiff?.changed ? "Yes" : "No"}
+                  </p>
+                </div>
+                <div className="rounded-3xl bg-black/20 border border-amber-600 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-amber-200">
+                    Savings delta
+                  </p>
+                  <p className="mt-3 text-2xl font-semibold text-white">
+                    ${internalAudit.changeSummary.savingsDelta?.toFixed(2) || "0.00"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-3xl bg-black/20 border border-amber-600 p-6">
+                  <p className="text-sm uppercase tracking-[0.22em] text-amber-200 mb-3">
+                    Previous recommendation
+                  </p>
+                  <p className="text-white">
+                    {internalAudit.changeSummary.previousReport?.overallRecommendations?.[0] || "No recommendation available."}
+                  </p>
+                </div>
+                <div className="rounded-3xl bg-black/20 border border-amber-600 p-6">
+                  <p className="text-sm uppercase tracking-[0.22em] text-amber-200 mb-3">
+                    Updated recommendation
+                  </p>
+                  <p className="text-white">
+                    {internalAudit.changeSummary.currentReport?.overallRecommendations?.[0] || "No recommendation available."}
+                  </p>
+                </div>
+              </div>
+
+              {internalAudit.changeSummary.pricingDiff?.changes?.length > 0 ? (
+                <div className="mt-6 rounded-3xl bg-black/20 border border-amber-600 p-6">
+                  <p className="text-sm uppercase tracking-[0.22em] text-amber-200 mb-4">
+                    Changed pricing items
+                  </p>
+                  <ul className="space-y-3 text-white">
+                    {internalAudit.changeSummary.pricingDiff.changes.map((change: any, index: number) => (
+                      <li
+                        key={`${change.toolId}-${index}`}
+                        className="rounded-2xl bg-zinc-950/80 border border-amber-700 p-4"
+                      >
+                        <p className="font-semibold">
+                          {change.toolName || change.toolId}
+                        </p>
+                        <p className="mt-1 text-sm text-amber-200">
+                          {change.type === "price_changed"
+                            ? `${change.planName || "Plan"} price changed from $${(change.oldPrice ?? 0).toFixed(2)} to $${(change.newPrice ?? 0).toFixed(2)}`
+                            : change.type === "plan_added"
+                            ? `New plan added: ${change.planName}`
+                            : change.type === "plan_removed"
+                            ? `Plan removed: ${change.planName}`
+                            : change.type === "tool_added"
+                            ? "New tool added"
+                            : change.type === "tool_removed"
+                            ? "Tool removed"
+                            : "Pricing change detected"}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : internalAudit.changeSummary.reportChanged ? (
+                <div className="mt-6 rounded-3xl bg-black/20 border border-amber-600 p-6">
+                  <p className="text-sm uppercase tracking-[0.22em] text-amber-200 mb-3">
+                    Why this audit changed
+                  </p>
+                  <p className="text-amber-100">
+                    The pricing data stayed the same, but the audit output changed enough to update the recommendation.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          )}
+
           <div className="grid md:grid-cols-4 gap-4 mb-8">
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
               <p className="text-sm text-zinc-400 mb-2">
                 Current Monthly Spend
               </p>
               <p className="text-3xl font-bold text-white">
-                ${report.summary.totalMonthlySpend.toFixed(2)}
+                ${visibleReport.summary.totalMonthlySpend.toFixed(2)}
               </p>
             </div>
 
@@ -195,7 +409,7 @@ const PublicAudit = () => {
                 Annual Spend
               </p>
               <p className="text-3xl font-bold text-white">
-                ${report.summary.totalAnnualSpend.toFixed(2)}
+                ${visibleReport.summary.totalAnnualSpend.toFixed(2)}
               </p>
             </div>
 
@@ -205,7 +419,7 @@ const PublicAudit = () => {
               </p>
               <p className="text-3xl font-bold text-emerald-400">
                 $
-                {report.shareCard.totalPotentialSavings.toFixed(
+                {visibleReport.shareCard.totalPotentialSavings.toFixed(
                   2
                 )}
               </p>
@@ -216,24 +430,24 @@ const PublicAudit = () => {
                 Tools Analyzed
               </p>
               <p className="text-3xl font-bold text-white">
-                {report.summary.numberOfTools}
+                {visibleReport.summary.numberOfTools}
               </p>
             </div>
           </div>
 
-          {report.overallRecommendations[0] && (
+          {visibleReport.overallRecommendations[0] && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-8">
               <p className="text-sm uppercase tracking-[0.22em] text-violet-300/80 mb-2">
                 Recommendation
               </p>
               <p className="text-zinc-200 leading-relaxed">
-                {report.overallRecommendations[0]}
+                {visibleReport.overallRecommendations[0]}
               </p>
             </div>
           )}
 
           <div className="space-y-5 mb-8">
-            {report.toolAudits.map((toolAudit, index) => {
+            {visibleReport.toolAudits.map((toolAudit: ToolAudit, index: number) => {
               const nextCost =
                 toolAudit.bestAlternative
                   ?.monthlyCost ||
@@ -270,7 +484,7 @@ const PublicAudit = () => {
                           {toolAudit.useCases.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-3">
                               {toolAudit.useCases.map(
-                                (useCase) => (
+                                (useCase: string) => (
                                   <span
                                     key={useCase}
                                     className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300 capitalize"

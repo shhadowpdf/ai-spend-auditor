@@ -1,5 +1,5 @@
 import {Routes, Route} from 'react-router-dom'
-import {Home, Audit, Results, PublicAudit} from './pages/export'
+import {Home, Audit, AuditDiff, Results, PublicAudit} from './pages/export'
 import { useEffect } from 'react'
 import { axiosInstance } from './lib/axios'
 import { Toaster } from 'react-hot-toast'
@@ -25,6 +25,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/audit" element={<Audit />} />
+      <Route path="/audit/diff/:auditId" element={<AuditDiff />} />
       <Route path="/results" element={<Results />} />
       <Route path="/public/audits/:publicId" element={<PublicAudit />} />
     </Routes>
