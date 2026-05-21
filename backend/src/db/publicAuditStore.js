@@ -519,3 +519,21 @@ export async function markAuditInvalidated(
   memoryInternalAuditStore.set(auditId, nextRecord);
   return nextRecord;
 }
+
+export async function markAuditNotified(auditId, notifiedAt = null) {
+  const existingRecord =
+    memoryInternalAuditStore.get(auditId) ||
+    (await fetchAuditFromSupabase(auditId));
+
+  if (!existingRecord) return null;
+
+  const updatedRecord = {
+    ...existingRecord,
+    notifiedAt,
+  };
+
+  const persistedRecord = await updateSupabaseInternalAuditRecord(updatedRecord);
+  const nextRecord = persistedRecord || updatedRecord;
+  memoryInternalAuditStore.set(auditId, nextRecord);
+  return nextRecord;
+}

@@ -508,3 +508,69 @@ export async function sendLeadCaptureConfirmationEmail(
 }
 
 export { LEAD_INTEREST_TYPES };
+
+export async function sendPricingChangeNotificationEmail({
+  email,
+  companyName,
+  affectedAudits = [],
+}) {
+  const recipientEmail = String(email || "").trim();
+
+  if (!recipientEmail) {
+    return { skipped: true, reason: "missing-recipient" };
+  }
+
+  const totalDelta = affectedAudits.reduce((sum, a) => sum + (a.changeSummary?.savingsDelta || 0), 0);
+
+  const subject =
+    affectedAudits.length > 0
+      ? `Credex: ${affectedAudits.length} audit${affectedAudits.length === 1 ? "" : "s"} updated — pricing changes detected`
+      : "Credex: audit updates";
+
+  const publicUrlFor = (auditId) =>
+    (ENV.PUBLIC_URL || "") + `/public/audits/${auditId}`;
+
+  const htmlList = affectedAudits
+    .map((a) => {
+      const link = a.auditId ? escapeHtml(publicUrlFor(a.auditId)) : "";
+      const delta = formatCurrency(a.changeSummary?.savingsDelta || 0);
+      return `
+        <li style="margin-bottom:10px;">
+          <strong>${escapeHtml(a.auditId)}</strong> — ${escapeHtml(a.changeSummary?.pricingDiff?.hasChanges ? `${a.changeSummary.pricingDiff.changes.length} pricing changes` : "Report changed")} · Savings delta: <strong>${escapeHtml(delta)}</strong>
+          ${link ? `<div><a href="${link}" style="color:#2563eb">View audit</a></div>` : ""}
+        </li>
+      `;
+    })
+    .join("");
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;padding:24px;">
+      <h2 style="margin-top:0;">Pricing changes detected for your Credex audit${companyName ? ` — ${escapeHtml(companyName)}` : ""}</h2>
+      <p>We re-ran your saved audits and found changes that may affect your recommendations. Total savings delta across affected audits: <strong>${formatCurrency(totalDelta)}</strong>/mo.</p>
+      <ul style="padding-left:16px;">${htmlList}</ul>
+      <p style="margin-top:18px;">If you want us to re-run or review any of these, visit your audit links above.</p>
+    </div>
+  `;
+
+  const text = [
+    `Pricing changes detected for ${affectedAudits.length} audit(s).`,
+    `Total savings delta: ${formatCurrency(totalDelta)}/mo.`,
+    ...affectedAudits.map((a) => `- ${a.auditId}: delta ${formatCurrency(a.changeSummary?.savingsDelta || 0)}`),
+  ].join("\n");
+
+  const emailResult = await sendResendEmail(
+    buildResendPayload({
+      email: recipientEmail,
+      subject,
+      html,
+      text,
+      tags: [
+        { name: "email_type", value: "pricing_change_notification" },
+      ],
+    })
+  );
+
+  if (emailResult.skipped) return emailResult;
+
+  return { ...emailResult, provider: "resend", totalDelta, count: affectedAudits.length };
+}

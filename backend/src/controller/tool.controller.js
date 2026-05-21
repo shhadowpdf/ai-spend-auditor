@@ -6,6 +6,9 @@ import {
     updatePublicAuditLeadCapture,
     saveAudit,
 } from "../db/publicAuditStore.js";
+import { markAuditNotified } from "../db/publicAuditStore.js";
+import { detectPricingChanges as detectPricingChangesUtil } from "../utils/pricingDetectorChange.js";
+import { sendPricingChangeNotificationEmail } from "../utils/email.js";
 import { resolvePublicOrigin } from "../utils/url.js";
 import {
     LEAD_INTEREST_TYPES,
@@ -231,3 +234,43 @@ export const captureAuditLead = async (
         });
     }
 }
+
+export const detectPricingChanges = async (req, res) => {
+    try {
+        const result = await detectPricingChangesUtil();
+
+        // Group affected audits by user email and notify once per user
+        const groups = {};
+        (result.affected || []).forEach((item) => {
+            const email = item.userEmail || item.invalidatedAudit?.userEmail;
+            if (!email) return;
+            if (!groups[email]) groups[email] = [];
+            groups[email].push(item);
+        });
+
+        for (const [email, items] of Object.entries(groups)) {
+            try {
+                const companyName = items[0]?.invalidatedAudit?.inputStack?.companyName || null;
+                await sendPricingChangeNotificationEmail({
+                    email,
+                    companyName,
+                    affectedAudits: items,
+                });
+
+                const notifiedAt = new Date().toISOString();
+                for (const it of items) {
+                    await markAuditNotified(it.auditId, notifiedAt);
+                }
+            } catch (err) {
+                console.error("Unable to notify user", email, err?.message || err);
+            }
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error("Pricing change detection failed.", error);
+        return res.status(500).json({
+            message: "Unable to detect pricing changes right now.",
+        });
+    }
+};
