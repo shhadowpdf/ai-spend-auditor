@@ -3,6 +3,8 @@ import {
   captureAuditLead,
   getSupportedTools,
   getUserAudit,
+  getSavedAudit,
+  rerunSavedAudit,
   detectPricingChanges,
 } from "../controller/tool.controller.js";
 import { rateLimiter } from "../middleware/rateLimiter.js";
@@ -15,6 +17,8 @@ const leadLimiter  = rateLimiter({ limit: 5,  windowMs: 20 * 60 * 1000 }); // 5 
 router.get("/", getSupportedTools);
 router.post("/audit", auditLimiter, getUserAudit);
 router.post("/audit/lead", leadLimiter, captureAuditLead);
+router.get("/audit/:auditId", auditLimiter, getSavedAudit);
+router.post("/audit/:auditId/rerun", auditLimiter, rerunSavedAudit);
 router.post("/detect-changes", detectPricingChanges);
 router.get("/detect-changes", detectPricingChanges);
 

@@ -4,7 +4,10 @@ import { queryGroq } from "../utils/groq.js";
 import {
     createPublicAuditRecord,
     updatePublicAuditLeadCapture,
+    updatePublicAuditRecord,
     saveAudit,
+    updateInternalAuditRecord,
+    getAuditById,
 } from "../db/publicAuditStore.js";
 import { markAuditNotified } from "../db/publicAuditStore.js";
 import { detectPricingChanges as detectPricingChangesUtil } from "../utils/pricingDetectorChange.js";
@@ -34,6 +37,10 @@ export const getSupportedTools = (req, res) => {
     return res.status(200).json(filteredInfo)
 }
 
+function deepClonePricingSnapshot(snapshot) {
+    return JSON.parse(JSON.stringify(snapshot));
+}
+
 function capturePricingSnapshot(auditItems) {
     if (!Array.isArray(auditItems)) {
         return {};
@@ -46,10 +53,10 @@ function capturePricingSnapshot(auditItems) {
             return snapshot;
         }
 
-        snapshot[item.toolId] = {
+        snapshot[item.toolId] = deepClonePricingSnapshot({
             name: toolInfo.name,
             plans: toolInfo.plans,
-        };
+        });
 
         return snapshot;
     }, {});
@@ -235,11 +242,94 @@ export const captureAuditLead = async (
     }
 }
 
+export const getSavedAudit = async (req, res) => {
+    try {
+        const auditId = String(req.params.auditId || "").trim();
+        if (!auditId) {
+            return res.status(400).json({
+                message: "Missing audit identifier.",
+            });
+        }
+
+        const audit = await getAuditById(auditId);
+        if (!audit) {
+            return res.status(404).json({
+                message: "Saved audit record not found.",
+            });
+        }
+
+        return res.status(200).json(audit);
+    } catch (error) {
+        console.error("Unable to load saved audit.", error);
+        return res.status(500).json({
+            message:
+                "Unable to load the saved audit right now.",
+        });
+    }
+};
+
+export const rerunSavedAudit = async (req, res) => {
+    try {
+        const auditId = String(req.params.auditId || "").trim();
+        if (!auditId) {
+            return res.status(400).json({
+                message: "Missing audit identifier.",
+            });
+        }
+
+        const audit = await getAuditById(auditId);
+        if (!audit) {
+            return res.status(404).json({
+                message: "Saved audit record not found.",
+            });
+        }
+
+        if (!audit.inputStack) {
+            return res.status(400).json({
+                message:
+                    "Saved audit is missing input data to rerun.",
+            });
+        }
+
+        const result = await runAudit(audit.inputStack);
+
+        try {
+            await updateInternalAuditRecord({
+                ...audit,
+                outputResult: result,
+                pricingSnapshot: capturePricingSnapshot(audit.inputStack.auditItems),
+                invalidated: false,
+                changeSummary: null,
+            });
+        } catch (error) {
+            console.error("Unable to persist rerun result.", error);
+        }
+
+        try {
+            await updatePublicAuditRecord({
+                publicId: audit.auditId,
+                report: result,
+            });
+        } catch (error) {
+            console.error("Unable to update public audit payload after rerun.", error);
+        }
+
+        return res.status(200).json({
+            data: result,
+        });
+    } catch (error) {
+        console.error("Rerun of saved audit failed.", error);
+        return res.status(500).json({
+            message:
+                "Unable to rerun the saved audit right now.",
+        });
+    }
+};
+
 export const detectPricingChanges = async (req, res) => {
     try {
         const result = await detectPricingChangesUtil();
 
-        // Group affected audits by user email and notify once per user
         const groups = {};
         (result.affected || []).forEach((item) => {
             const email = item.userEmail || item.invalidatedAudit?.userEmail;

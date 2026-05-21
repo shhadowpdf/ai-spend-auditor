@@ -122,14 +122,19 @@ async function updateSupabaseAuditRecord(
     return null;
   }
 
+  const payload = {
+    company_name: updatedRecord.companyName,
+    email: updatedRecord.email,
+    report: updatedRecord.report,
+  };
+
+  if (updatedRecord.publicReport) {
+    payload.public_report = updatedRecord.publicReport;
+  }
+
   const { data, error } = await supabase
     .from(PUBLIC_AUDITS_TABLE)
-    .update({
-      company_name:
-        updatedRecord.companyName,
-      email: updatedRecord.email,
-      report: updatedRecord.report,
-    })
+    .update(payload)
     .eq("public_id", updatedRecord.publicId)
     .select(
       "id, public_id, public_url, company_name, email, report, public_report, llm_response, created_at"
@@ -148,6 +153,53 @@ async function updateSupabaseAuditRecord(
     data,
     "supabase"
   );
+}
+
+export async function updatePublicAuditRecord({
+  publicId,
+  email,
+  companyName,
+  report,
+}) {
+  const existingRecord =
+    memoryAuditStore.get(publicId) ||
+    (await fetchFromSupabase(publicId));
+
+  if (!existingRecord) {
+    return null;
+  }
+
+  const nextReport = report || existingRecord.report;
+  const nextCompanyName =
+    companyName || existingRecord.companyName || null;
+  const nextEmail = email || existingRecord.email || null;
+  const updatedRecord = {
+    ...existingRecord,
+    companyName: nextCompanyName,
+    email: nextEmail,
+    report: nextReport,
+    publicReport: buildPublicAuditPayload({
+      publicId: existingRecord.publicId,
+      publicUrl: existingRecord.publicUrl,
+      createdAt: existingRecord.createdAt,
+      report: nextReport,
+      llmResponse: existingRecord.llmResponse || "",
+    }),
+  };
+
+  const persistedRecord =
+    await updateSupabaseAuditRecord(
+      updatedRecord
+    );
+  const nextRecord =
+    persistedRecord ||
+    normalizeStoredAudit(
+      updatedRecord,
+      existingRecord.storage
+    );
+
+  memoryAuditStore.set(publicId, nextRecord);
+  return nextRecord;
 }
 
 export async function createPublicAuditRecord({
@@ -241,24 +293,29 @@ export async function updatePublicAuditLeadCapture(
     null;
   const nextEmail =
     email || existingRecord.email || null;
+  const nextReport = {
+    ...(existingRecord.report || {}),
+    leadCapture: {
+      ...(existingRecord.report?.leadCapture || {}),
+      interestType,
+      email: nextEmail,
+      companyName: nextCompanyName,
+      requestedAt: new Date().toISOString(),
+    },
+  };
+
   const updatedRecord = {
     ...existingRecord,
     companyName: nextCompanyName,
     email: nextEmail,
-    report: {
-      ...(existingRecord.report || {}),
-      leadCapture: {
-        ...(
-          existingRecord.report
-            ?.leadCapture || {}
-        ),
-        interestType,
-        email: nextEmail,
-        companyName: nextCompanyName,
-        requestedAt:
-          new Date().toISOString(),
-      },
-    },
+    report: nextReport,
+    publicReport: buildPublicAuditPayload({
+      publicId: existingRecord.publicId,
+      publicUrl: existingRecord.publicUrl,
+      createdAt: existingRecord.createdAt,
+      report: nextReport,
+      llmResponse: existingRecord.llmResponse || "",
+    }),
   };
 
   const persistedRecord =
@@ -273,6 +330,101 @@ export async function updatePublicAuditLeadCapture(
     );
 
   memoryAuditStore.set(publicId, nextRecord);
+  return nextRecord;
+}
+
+async function updateSupabaseInternalAuditRecord(updatedAudit) {
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from(AUDITS_TABLE)
+    .update({
+      invalidated: updatedAudit.invalidated,
+      change_summary: updatedAudit.changeSummary,
+      notified_at: updatedAudit.notifiedAt,
+    })
+    .eq("audit_id", updatedAudit.auditId)
+    .select(
+      "id, audit_id, user_email, input_stack, output_result, pricing_snapshot, invalidated, change_summary, original_audit_id, notified_at, created_at"
+    )
+    .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "Supabase update failed for internal audit.",
+      error.message
+    );
+    return null;
+  }
+
+  return normalizeStoredAuditRecord(data);
+}
+
+async function updateSupabaseInternalAuditFully(
+  updatedAudit
+) {
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from(AUDITS_TABLE)
+    .update({
+      user_email: updatedAudit.userEmail,
+      input_stack: updatedAudit.inputStack,
+      output_result: updatedAudit.outputResult,
+      pricing_snapshot: updatedAudit.pricingSnapshot,
+      invalidated: updatedAudit.invalidated,
+      change_summary: updatedAudit.changeSummary,
+      original_audit_id: updatedAudit.originalAuditId,
+      notified_at: updatedAudit.notifiedAt,
+    })
+    .eq("audit_id", updatedAudit.auditId)
+    .select(
+      "id, audit_id, user_email, input_stack, output_result, pricing_snapshot, invalidated, change_summary, original_audit_id, notified_at, created_at"
+    )
+    .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "Supabase update failed for internal audit.",
+      error.message
+    );
+    return null;
+  }
+
+  return normalizeStoredAuditRecord(data);
+}
+
+export async function updateInternalAuditRecord(
+  updatedAudit
+) {
+  const existingRecord =
+    memoryInternalAuditStore.get(
+      updatedAudit.auditId,
+    ) || (await fetchAuditFromSupabase(updatedAudit.auditId));
+
+  if (!existingRecord) {
+    return null;
+  }
+
+  const recordToPersist = {
+    ...existingRecord,
+    ...updatedAudit,
+  };
+
+  const persistedRecord =
+    await updateSupabaseInternalAuditFully(
+      recordToPersist,
+    );
+  const nextRecord =
+    persistedRecord || recordToPersist;
+  memoryInternalAuditStore.set(
+    updatedAudit.auditId,
+    nextRecord,
+  );
   return nextRecord;
 }
 
@@ -403,35 +555,6 @@ async function fetchAllAuditsFromSupabase() {
   }
 
   return (data || []).map(normalizeStoredAuditRecord);
-}
-
-async function updateSupabaseInternalAuditRecord(updatedAudit) {
-  if (!supabase) {
-    return null;
-  }
-
-  const { data, error } = await supabase
-    .from(AUDITS_TABLE)
-    .update({
-      invalidated: updatedAudit.invalidated,
-      change_summary: updatedAudit.changeSummary,
-      notified_at: updatedAudit.notifiedAt,
-    })
-    .eq("audit_id", updatedAudit.auditId)
-    .select(
-      "id, audit_id, user_email, input_stack, output_result, pricing_snapshot, invalidated, change_summary, original_audit_id, notified_at, created_at"
-    )
-    .maybeSingle();
-
-  if (error) {
-    console.warn(
-      "Supabase update failed for internal audit.",
-      error.message
-    );
-    return null;
-  }
-
-  return normalizeStoredAuditRecord(data);
 }
 
 export async function saveAudit({

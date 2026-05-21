@@ -24,6 +24,25 @@ function calculateSubscriptionCost(plan, membersNum = 1) {
   return plan.price * seats;
 }
 
+function getCurrentToolMonthlySpend(tool, toolInfo) {
+  const currentPlan = toolInfo.plans?.find(
+    (plan) => plan.id === tool.planId,
+  );
+
+  if (!currentPlan) {
+    return tool.monthlySpend || 0;
+  }
+
+  if (typeof currentPlan.price === "number") {
+    return calculateSubscriptionCost(
+      currentPlan,
+      tool.membersNum || 1,
+    );
+  }
+
+  return tool.monthlySpend || 0;
+}
+
 function createSubscriptionAlternative(toolInfo, plan, monthlyCost) {
   return {
     toolName: toolInfo.name,
@@ -240,7 +259,10 @@ export async function runAudit(userData) {
 
     const membersNum = tool.membersNum || 1;
     const useCases = tool.useCase || [];
-    const monthlySpend = tool.monthlySpend;
+    const monthlySpend = getCurrentToolMonthlySpend(
+      tool,
+      toolInfo,
+    );
 
     let alternatives = [];
     let alternativeType = "";

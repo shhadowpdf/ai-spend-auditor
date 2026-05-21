@@ -64,10 +64,10 @@ function getTopSavingsOpportunities(
 
 function buildEmailSubject(totalPotentialSavings) {
   if (totalPotentialSavings > 0) {
-    return `Your Credex audit is ready: ${formatCurrency(totalPotentialSavings)}/mo in potential savings`;
+    return `Your AI Audit audit is ready: ${formatCurrency(totalPotentialSavings)}/mo in potential savings`;
   }
 
-  return "Your Credex audit is ready";
+  return "Your AI Audit audit is ready";
 }
 
 function buildOpportunityMarkup(
@@ -126,8 +126,8 @@ function buildHtmlEmail({
         )}/mo</strong> in potential savings from lower-cost options that still fit your selected use cases.`
       : "We did not find a cheaper matched alternative for the tools and use cases you submitted.";
   const savingsFollowUpCopy = highSavingsCase
-    ? `This looks like a high-savings case, and the Credex team will reach out with next steps.`
-    : "Credex reaches out directly on high-savings cases.";
+    ? `This looks like a high-savings case, and the AI Audit team will reach out with next steps.`
+    : "AI Audit reaches out directly on high-savings cases.";
   const shareLinkMarkup = publicUrl
     ? `
       <div style="margin-top: 28px;">
@@ -144,7 +144,7 @@ function buildHtmlEmail({
     <div style="margin: 0; padding: 32px 16px; background: #f3f4f6; font-family: Arial, sans-serif;">
       <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 18px; padding: 32px; color: #111827;">
         <p style="margin: 0 0 16px; color: #6b7280; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;">
-          Credex Audit Confirmation
+          AI Audit Audit Confirmation
         </p>
         <h1 style="margin: 0 0 16px; font-size: 28px; line-height: 1.2;">
           Your audit is complete
@@ -179,7 +179,7 @@ function buildTextEmail({
   highSavingsCase,
 }) {
   const lines = [
-    "Your Credex audit is complete.",
+    "Your AI Audit audit is complete.",
     "",
     `Current spend reviewed: ${formatCurrency(
       totalMonthlySpend
@@ -213,8 +213,8 @@ function buildTextEmail({
   lines.push(
     "",
     highSavingsCase
-      ? "This looks like a high-savings case, and the Credex team will reach out with next steps."
-      : "Credex reaches out directly on high-savings cases."
+      ? "This looks like a high-savings case, and the AI Audit team will reach out with next steps."
+      : "AI Audit reaches out directly on high-savings cases."
   );
 
   if (publicUrl) {
@@ -239,18 +239,18 @@ function buildLeadCaptureCopy({
   ) {
     return {
       subject:
-        "Credex will follow up on your audit",
+        "AI Audit will follow up on your audit",
       html: `
         <div style="margin: 0; padding: 32px 16px; background: #f3f4f6; font-family: Arial, sans-serif;">
           <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 18px; padding: 32px; color: #111827;">
             <p style="margin: 0 0 16px; color: #6b7280; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;">
-              Credex Follow-Up Confirmed
+              AI Audit Follow-Up Confirmed
             </p>
             <h1 style="margin: 0 0 16px; font-size: 28px; line-height: 1.2;">
               We have your audit
             </h1>
             <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.7; color: #374151;">
-              Thanks. Credex will reach out${companyLine} to help you capture the savings identified in your audit.
+              Thanks. AI Audit will reach out${companyLine} to help you capture the savings identified in your audit.
             </p>
             ${
               publicUrl
@@ -269,9 +269,9 @@ function buildLeadCaptureCopy({
         </div>
       `,
       text: [
-        "Credex will follow up on your audit.",
+        "AI Audit will follow up on your audit.",
         "",
-        `Thanks. Credex will reach out${companyLine} to help you capture the savings identified in your audit.`,
+        `Thanks. AI Audit will reach out${companyLine} to help you capture the savings identified in your audit.`,
         publicUrl
           ? `Redacted audit link: ${publicUrl}`
           : null,
@@ -283,12 +283,12 @@ function buildLeadCaptureCopy({
 
   return {
     subject:
-      "You're on the Credex optimization watchlist",
+      "You're on the AI Audit optimization watchlist",
     html: `
       <div style="margin: 0; padding: 32px 16px; background: #f3f4f6; font-family: Arial, sans-serif;">
         <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 18px; padding: 32px; color: #111827;">
           <p style="margin: 0 0 16px; color: #6b7280; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;">
-            Credex Optimization Watch
+            AI Audit Optimization Watch
           </p>
           <h1 style="margin: 0 0 16px; font-size: 28px; line-height: 1.2;">
             We will keep an eye on your stack
@@ -313,7 +313,7 @@ function buildLeadCaptureCopy({
       </div>
     `,
     text: [
-      "You're on the Credex optimization watchlist.",
+      "You're on the AI Audit optimization watchlist.",
       "",
       `Thanks. We will notify you${companyLine} when new optimizations apply to your stack.`,
       publicUrl ? `Audit link: ${publicUrl}` : null,
@@ -522,22 +522,38 @@ export async function sendPricingChangeNotificationEmail({
 
   const totalDelta = affectedAudits.reduce((sum, a) => sum + (a.changeSummary?.savingsDelta || 0), 0);
 
-  const subject =
-    affectedAudits.length > 0
-      ? `Credex: ${affectedAudits.length} audit${affectedAudits.length === 1 ? "" : "s"} updated — pricing changes detected`
-      : "Credex: audit updates";
+  // Prefer a subject that distinguishes pricing vs recommendation-only changes
+  const hasPricingChanges = affectedAudits.some((a) => a.changeSummary?.pricingDiff?.hasChanges);
+  const hasReportOnlyChanges = affectedAudits.some((a) => a.changeSummary?.reportChanged && !a.changeSummary?.pricingDiff?.hasChanges);
 
-  const publicUrlFor = (auditId) =>
-    (ENV.PUBLIC_URL || "") + `/public/audits/${auditId}`;
+  const subject = hasPricingChanges
+    ? `AI Audit: ${affectedAudits.length} audit${affectedAudits.length === 1 ? "" : "s"} updated — pricing changes detected`
+    : hasReportOnlyChanges
+    ? `AI Audit: ${affectedAudits.length} audit${affectedAudits.length === 1 ? "" : "s"} updated — recommendation changes`
+    : `AI Audit: ${affectedAudits.length} audit${affectedAudits.length === 1 ? "" : "s"} updated`;
+
+  const diffUrlFor = (auditId) => (ENV.PUBLIC_URL || "") + `/audit/diff/${auditId}`;
 
   const htmlList = affectedAudits
     .map((a) => {
-      const link = a.auditId ? escapeHtml(publicUrlFor(a.auditId)) : "";
+      const link = a.auditId ? escapeHtml(diffUrlFor(a.auditId)) : "";
       const delta = formatCurrency(a.changeSummary?.savingsDelta || 0);
+      const recOld = a.changeSummary?.recommendationDiff?.old || null;
+      const recNew = a.changeSummary?.recommendationDiff?.new || null;
+
+      const recHtml = recOld || recNew
+        ? `<div style="margin-top:6px;color:#374151;font-size:13px;">` +
+            (recOld ? `<div><strong>Previous:</strong> ${escapeHtml(recOld)}</div>` : "") +
+            (recNew ? `<div><strong>Now:</strong> ${escapeHtml(recNew)}</div>` : "") +
+          `</div>`
+        : "";
+
       return `
-        <li style="margin-bottom:10px;">
-          <strong>${escapeHtml(a.auditId)}</strong> — ${escapeHtml(a.changeSummary?.pricingDiff?.hasChanges ? `${a.changeSummary.pricingDiff.changes.length} pricing changes` : "Report changed")} · Savings delta: <strong>${escapeHtml(delta)}</strong>
-          ${link ? `<div><a href="${link}" style="color:#2563eb">View audit</a></div>` : ""}
+        <li style="margin-bottom:14px;">
+          <div style="font-weight:600;margin-bottom:6px;">${escapeHtml(a.auditId)}</div>
+          <div style="color:#374151;font-size:14px;">${escapeHtml(a.changeSummary?.pricingDiff?.hasChanges ? `${a.changeSummary.pricingDiff.changes.length} pricing change(s)` : (a.changeSummary?.reportChanged ? "Report changed" : "Updated"))} · Savings delta: <strong>${escapeHtml(delta)}</strong></div>
+          ${recHtml}
+          ${link ? `<div style="margin-top:8px;"><a href="${link}" style="color:#2563eb">View diff and re-run</a></div>` : ""}
         </li>
       `;
     })
@@ -545,18 +561,31 @@ export async function sendPricingChangeNotificationEmail({
 
   const html = `
     <div style="font-family:Arial,sans-serif;padding:24px;">
-      <h2 style="margin-top:0;">Pricing changes detected for your Credex audit${companyName ? ` — ${escapeHtml(companyName)}` : ""}</h2>
-      <p>We re-ran your saved audits and found changes that may affect your recommendations. Total savings delta across affected audits: <strong>${formatCurrency(totalDelta)}</strong>/mo.</p>
+      <h2 style="margin-top:0;">Updates detected for your AI Audit audit${companyName ? ` — ${escapeHtml(companyName)}` : ""}</h2>
+      <p>${hasPricingChanges ? `We re-ran your saved audits and found changes that may affect your recommendations.` : hasReportOnlyChanges ? `We re-ran your saved audits and the recommendation output changed even though pricing data did not.` : `We re-ran your saved audits and found updates.`} Total savings delta across affected audits: <strong>${formatCurrency(totalDelta)}</strong>/mo.</p>
       <ul style="padding-left:16px;">${htmlList}</ul>
-      <p style="margin-top:18px;">If you want us to re-run or review any of these, visit your audit links above.</p>
+      <p style="margin-top:18px;">Click the links above to view the diff and re-run any audit you want refreshed.</p>
     </div>
   `;
 
-  const text = [
-    `Pricing changes detected for ${affectedAudits.length} audit(s).`,
+  const textLines = [
+    `Updates detected for ${affectedAudits.length} audit(s).`,
     `Total savings delta: ${formatCurrency(totalDelta)}/mo.`,
-    ...affectedAudits.map((a) => `- ${a.auditId}: delta ${formatCurrency(a.changeSummary?.savingsDelta || 0)}`),
-  ].join("\n");
+  ];
+
+  affectedAudits.forEach((a) => {
+    const delta = formatCurrency(a.changeSummary?.savingsDelta || 0);
+    textLines.push(`- ${a.auditId}: ${a.changeSummary?.pricingDiff?.hasChanges ? `${a.changeSummary.pricingDiff.changes.length} pricing change(s)` : (a.changeSummary?.reportChanged ? 'Report changed' : 'Updated')} · delta ${delta}`);
+    const recOld = a.changeSummary?.recommendationDiff?.old || null;
+    const recNew = a.changeSummary?.recommendationDiff?.new || null;
+    if (recOld || recNew) {
+      if (recOld) textLines.push(`  Previous: ${recOld}`);
+      if (recNew) textLines.push(`  Now: ${recNew}`);
+    }
+    if (a.auditId) textLines.push(`  View diff: ${(ENV.PUBLIC_URL || "") + `/audit/diff/${a.auditId}`}`);
+  });
+
+  const text = textLines.join("\n");
 
   const emailResult = await sendResendEmail(
     buildResendPayload({
